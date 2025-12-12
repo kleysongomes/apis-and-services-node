@@ -76,11 +76,18 @@ module.exports = {
           sc.parent_system,
           sc.origin_service,
           COUNT(i.id) AS error_count,
-          MAX(i.criticality) AS max_criticality
+          MAX(i.criticality) AS max_criticality,
+          (
+            SELECT error_message 
+            FROM incidents inc 
+            WHERE inc.service_id = sc.id 
+            ORDER BY inc.timestamp DESC 
+            LIMIT 1
+          ) AS latest_error
         FROM service_catalog sc
         LEFT JOIN incidents i ON sc.id = i.service_id AND i.timestamp > NOW() - INTERVAL '30 minutes'
         GROUP BY sc.id, sc.parent_system, sc.origin_service
-        ORDER BY error_count DESC
+        ORDER BY error_count DESC, max_criticality DESC
       `;
 
       const result = await pool.query(query);
